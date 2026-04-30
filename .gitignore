@@ -7,8 +7,6 @@ dist/
 # Environment
 .env
 
-# Drizzle migrations (keep generated migrations but not dev output)
-drizzle/meta/
 
 # Logs
 *.log

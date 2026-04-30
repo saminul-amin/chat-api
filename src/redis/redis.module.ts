@@ -7,8 +7,6 @@ export const REDIS_SUB_CLIENT = Symbol('REDIS_SUB_CLIENT');
 
 function createRedisClient(url: string, name: string): Redis {
   const client = new Redis(url, {
-    // Stop reconnecting after 3 failures so the process exits cleanly
-    // instead of flooding the console with ECONNREFUSED indefinitely.
     retryStrategy: (times: number) => {
       if (times >= 3) {
         return null;
@@ -18,7 +16,6 @@ function createRedisClient(url: string, name: string): Redis {
   });
 
   client.on('error', (err: Error) => {
-    // Only log the first ECONNREFUSED occurrence to avoid log flooding
     if ((err as NodeJS.ErrnoException).code === 'ECONNREFUSED') {
       Logger.error(
         `Redis (${name}) cannot connect to ${url} — is Redis running?`,
@@ -55,10 +52,6 @@ export class RedisModule implements OnApplicationBootstrap {
 
   constructor(@Inject(REDIS_CLIENT) private readonly redis: Redis) {}
 
-  /**
-   * Verify the Redis connection on startup and crash with a clear message
-   * rather than silently running with a broken connection.
-   */
   async onApplicationBootstrap(): Promise<void> {
     try {
       await this.redis.ping();

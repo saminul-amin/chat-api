@@ -67,14 +67,8 @@ export class RoomsController {
 
   @Delete(':id')
   async remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
-    // 1. Validate existence and ownership — throws 404 or 403 before any side effects
     await this.roomsService.validateDeletePermission(id, user.username);
-
-    // 2. Publish room:deleted BEFORE deletion, per contract:
-    //    "Before deleting, emit a room:deleted WebSocket event via Redis pub/sub"
     await this.redis.publish('chat:room:deleted', JSON.stringify({ roomId: id }));
-
-    // 3. Delete from DB (cascades to messages) and clean up Redis active-user set
     await this.roomsService.executeDelete(id);
 
     return successResponse({ deleted: true });

@@ -125,7 +125,6 @@ export class MessagesService {
 
     const message = inserted[0];
 
-    // Publish to Redis for WebSocket fan-out — never emit directly from REST
     await this.redis.publish(
       `chat:room:${roomId}:message`,
       JSON.stringify({

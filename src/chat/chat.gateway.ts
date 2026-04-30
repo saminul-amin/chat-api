@@ -26,7 +26,7 @@ export class ChatGateway
   implements OnGatewayConnection, OnGatewayDisconnect, OnGatewayInit, OnModuleInit
 {
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   private readonly logger = new Logger(ChatGateway.name);
 
@@ -38,27 +38,15 @@ export class ChatGateway
     @Inject(DRIZZLE) private readonly db: NodePgDatabase<typeof schema>,
   ) {}
 
-  /**
-   * afterInit is called right after the Socket.io server is created.
-   * This is the correct lifecycle hook to attach the Redis adapter so that
-   * Socket.io room fan-out (server.to(...).emit(...)) works across multiple
-   * server instances.
-   */
   async afterInit(server: Server): Promise<void> {
     const redisUrl = this.configService.getOrThrow<string>('REDIS_URL');
     const adapterPub = new IORedis(redisUrl);
     const adapterSub = adapterPub.duplicate();
-    // `server` is the /chat Namespace (not the root Server) when a namespace is defined.
-    // The adapter must be set on the root io.Server, reachable via namespace.server.
     const rootServer: Server = (server as unknown as { server: Server }).server;
     rootServer.adapter(createAdapter(adapterPub, adapterSub));
     this.logger.log('Socket.io Redis adapter configured');
   }
 
-  /**
-   * onModuleInit subscribes to Redis pub/sub channels that bridge
-   * the REST layer to the WebSocket layer across all instances.
-   */
   async onModuleInit(): Promise<void> {
     await this.redisSub.psubscribe('chat:room:*:message', 'chat:room:deleted');
 
@@ -72,7 +60,6 @@ export class ChatGateway
           return;
         }
 
-        // channel format: chat:room:<roomId>:message
         const parts = channel.split(':');
         const roomId = parts[2];
         this.server.to(`room:${roomId}`).emit('message:new', {
@@ -124,7 +111,6 @@ export class ChatGateway
         return;
       }
 
-      // Store connection state in Redis (no in-memory maps)
       await this.redis.hset(`socket:${client.id}`, {
         username: session.username,
         roomId,
@@ -135,10 +121,8 @@ export class ChatGateway
 
       const activeUsersArr = await this.redis.smembers(`room:${roomId}:active_users`);
 
-      // Emit room:joined only to the connecting client
       client.emit('room:joined', { activeUsers: activeUsersArr });
 
-      // Broadcast room:user_joined to all OTHER clients in the room
       client.to(`room:${roomId}`).emit('room:user_joined', {
         username: session.username,
         activeUsers: activeUsersArr,

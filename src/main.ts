@@ -3,8 +3,26 @@ import { ValidationPipe, HttpStatus } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { AppException } from './common/exceptions/app.exception';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import { migrate } from 'drizzle-orm/node-postgres/migrator';
+import { Pool } from 'pg';
+import { join } from 'path';
+
+async function runMigrations(): Promise<void> {
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
+    connectionTimeoutMillis: 10000,
+  });
+  const db = drizzle(pool);
+  await migrate(db, { migrationsFolder: join(__dirname, '..', '..', 'drizzle') });
+  await pool.end();
+  console.log('Migrations applied');
+}
 
 async function bootstrap() {
+  await runMigrations();
+
   const app = await NestFactory.create(AppModule);
 
   app.enableCors({ origin: '*' });

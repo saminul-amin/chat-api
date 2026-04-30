@@ -15,6 +15,7 @@
     "lint": "eslint \"{src,apps,libs}/**/*.ts\" --fix",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
+    "db:migrate:prod": "node dist/migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio"
   },

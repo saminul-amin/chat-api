@@ -11,8 +11,7 @@ import { join } from 'path';
 async function runMigrations(): Promise<void> {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 15000,
   });
   const db = drizzle(pool);
   await migrate(db, { migrationsFolder: join(__dirname, '..', '..', 'drizzle') });
